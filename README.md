@@ -1,3 +1,5 @@
+**Test task from preinterview 3**  
+
 [![.NET Build](https://github.com/vnmtwo/SerializeDeserializeTestTask/actions/workflows/dotnet_build.yml/badge.svg)](https://github.com/vnmtwo/SerializeDeserializeTestTask/actions/workflows/dotnet_build.yml)
 [![.NET Test](https://github.com/vnmtwo/SerializeDeserializeTestTask/actions/workflows/dotnet_test.yml/badge.svg)](https://github.com/vnmtwo/SerializeDeserializeTestTask/actions/workflows/dotnet_test.yml)  
 
