@@ -128,11 +128,12 @@ namespace SerializeDeserializeTestTask
         {
             if (index <= 0 || index >= Store.Count)
                 throw new ArgumentOutOfRangeException();
-            ListNode node = new ListNode(value);
 
+            ListNode node = new ListNode(value);
             ListNode currentNode = Head;
-            ListNode nextNode = null;
+            ListNode nextNode;
             int c = 0;
+
             do
             {
                 nextNode = currentNode.Next;
@@ -160,38 +161,27 @@ namespace SerializeDeserializeTestTask
 
         public void Serialize(Stream s)
         {
-            if (Head is null) throw new NullReferenceException();
+            if (s is null) throw new ArgumentNullException("s");
 
             s.Write(BitConverter.GetBytes(Count));
-            if (Count > 0)
+
+            foreach (var cn in Store)
             {
-                foreach (var cn in Store)
+                int prev = (cn.Previous is null)? -1 : Store.IndexOf(cn.Previous);
+                int next = (cn.Next is null)? -1 : Store.IndexOf(cn.Next);
+                int random = (cn.Random is null) ? -1 : Store.IndexOf(cn.Random);
+                int datalength = (cn.Data is null) ? -1 : cn.Data.Length;
+
+                s.Write(BitConverter.GetBytes(prev));
+                s.Write(BitConverter.GetBytes(next));
+                s.Write(BitConverter.GetBytes(random));
+                s.Write(BitConverter.GetBytes(datalength * sizeof(char)));
+
+                if (datalength > 0)
                 {
-                    int prev, next, random, datalength;
-
-                    if (cn.Previous == null) prev = -1;
-                    else prev = Store.IndexOf(cn.Previous);
-
-                    if (cn.Next == null) next = -1;
-                    else next = Store.IndexOf(cn.Next);
-
-                    if (cn.Random == null) random = -1;
-                    else random = Store.IndexOf(cn.Random);
-
-                    if (cn.Data == null) datalength = -1;
-                    else datalength = cn.Data.Length;
-
-                    s.Write(BitConverter.GetBytes(prev));
-                    s.Write(BitConverter.GetBytes(next));
-                    s.Write(BitConverter.GetBytes(random));
-                    s.Write(BitConverter.GetBytes(datalength * sizeof(char)));
-
-                    if (datalength > 0)
+                    foreach (var ch in cn.Data)
                     {
-                        foreach (var ch in cn.Data)
-                        {
-                            s.Write(BitConverter.GetBytes(ch));
-                        }
+                        s.Write(BitConverter.GetBytes(ch));
                     }
                 }
             }
