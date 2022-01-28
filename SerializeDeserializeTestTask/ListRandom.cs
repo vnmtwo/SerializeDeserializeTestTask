@@ -102,7 +102,6 @@ namespace SerializeDeserializeTestTask
         public ListRandom()
         {
             Init();
-            var l = new List<string>();
         }
 
         public void Init()
