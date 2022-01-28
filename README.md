@@ -3,3 +3,4 @@
 
 - took to create fisrt version: 1:40  
 - took to create test and debug: 0:40
+- took to create second version, test, debug: 4:00 (lost in references)
