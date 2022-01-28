@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 
@@ -30,7 +31,7 @@ namespace SerializeDeserializeTestTask
         public int Next, Previous, Random;
     }
 
-    public class ListRandom
+    public class ListRandom : IEnumerable
     {
         private const int minStreamLength = (sizeof(int) * 4) * 2 + sizeof(int); //struct*2 + Count;
 
@@ -45,6 +46,7 @@ namespace SerializeDeserializeTestTask
             }
             set
             {
+                if (value is null) throw new ArgumentNullException();
                 if (Store.Contains(value.Next))
                 {
                     int i = Store.IndexOf(value.Next);
@@ -69,6 +71,7 @@ namespace SerializeDeserializeTestTask
             }
             set
             {
+                if (value is null) throw new ArgumentNullException();
                 if (Store.Contains(value.Previous))
                 {
                     int i = Store.IndexOf(value.Previous);
@@ -129,32 +132,22 @@ namespace SerializeDeserializeTestTask
             if (index <= 0 || index >= Store.Count)
                 throw new ArgumentOutOfRangeException();
 
-            ListNode node = new ListNode(value);
-            ListNode currentNode = Head;
-            ListNode nextNode;
+            ListNode Prev = null, Next = null, node = new ListNode(value);
             int c = 0;
 
-            do
+            foreach (var n in this)
             {
-                nextNode = currentNode.Next;
-                if (index == c + 1)
-                {
-                    currentNode.Next = node;
-                    node.Previous = currentNode;
-                }
-                if (index == c)
-                {
-                    currentNode.Previous = node;
-                    node.Next = currentNode;
-                    break;
-                }
-                c++;
-                currentNode = nextNode;
-            } while (nextNode != null);
+                if (index == c + 1) { Prev = n; c++; continue; }
+                if (index == c) { Next = n; break; }
+            }
 
-            int i = rnd.Next(Count - 1) - 1;
-            if (i < 0) node.Random = null;
-            else node.Random = Store[i];
+            Next.Previous = node;
+            Prev.Next = node;
+            node.Previous = Prev;
+            node.Next = Next;
+
+            int i = rnd.Next(Count - 1) - 1; //last -1 for negative number and null generation
+            node.Random = (i < 0) ? null : Store[i];
 
             Store.Add(node);
         }
@@ -167,8 +160,8 @@ namespace SerializeDeserializeTestTask
 
             foreach (var cn in Store)
             {
-                int prev = (cn.Previous is null)? -1 : Store.IndexOf(cn.Previous);
-                int next = (cn.Next is null)? -1 : Store.IndexOf(cn.Next);
+                int prev = (cn.Previous is null) ? -1 : Store.IndexOf(cn.Previous);
+                int next = (cn.Next is null) ? -1 : Store.IndexOf(cn.Next);
                 int random = (cn.Random is null) ? -1 : Store.IndexOf(cn.Random);
                 int datalength = (cn.Data is null) ? -1 : cn.Data.Length;
 
@@ -189,7 +182,7 @@ namespace SerializeDeserializeTestTask
 
         public void Deserialize(Stream s)
         {
-            if (s == null) throw new ArgumentNullException("s");
+            if (s is null) throw new ArgumentNullException("s");
 
             if (s.Length < minStreamLength)
                 throw new Exception("Stream is incorrect");
@@ -198,7 +191,7 @@ namespace SerializeDeserializeTestTask
 
             int count = ReadInt(s);
 
-            while (s.Position < s.Length-4*sizeof(int)+1)
+            while (s.Position < s.Length - 4 * sizeof(int) + 1)
             {
                 int prev = ReadInt(s);
                 int next = ReadInt(s);
@@ -206,13 +199,14 @@ namespace SerializeDeserializeTestTask
                 int datalength = ReadInt(s);
                 string data;
 
-                data = (datalength / sizeof(char) == -1)? null : ReadString(s, datalength);
-                
-                indexes.Add(new TempNode() { 
-                    Node = new ListNode(data), 
-                    Next = next, 
-                    Previous = prev, 
-                    Random = random 
+                data = (datalength / sizeof(char) == -1) ? null : ReadString(s, datalength);
+
+                indexes.Add(new TempNode()
+                {
+                    Node = new ListNode(data),
+                    Next = next,
+                    Previous = prev,
+                    Random = random
                 });
             }
 
@@ -235,8 +229,8 @@ namespace SerializeDeserializeTestTask
 
         private static string ReadString(Stream s, int dataLength)
         {
-            var stringLength = dataLength/sizeof(char);
-            var chars = new char[stringLength] ;
+            var stringLength = dataLength / sizeof(char);
+            var chars = new char[stringLength];
             var buffer = new byte[sizeof(char)];
 
             for (int i = 0; i < stringLength; i++)
@@ -268,15 +262,71 @@ namespace SerializeDeserializeTestTask
         public List<string> GetElements()
         {
             List<string> o = new List<string>();
-
-            ListNode cn = Head;
-            do
+            foreach (var e in this)
             {
-                o.Add(cn.Data);
-                cn = cn.Next;
-            } while (cn != null);
-
+                o.Add(e.Data);
+            }
             return o;
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return (IEnumerator)GetEnumerator();
+        }
+
+        public ListRandomEnum GetEnumerator()
+        {
+            return new ListRandomEnum(Head);
+        }
+    }
+    public class ListRandomEnum : IEnumerator
+    {
+        private ListNode head;
+        private ListNode current;
+        private bool f;
+
+        public ListRandomEnum(ListNode head)
+        {
+            f = true;
+            this.head = head;
+            this.current = null;
+        }
+
+        object IEnumerator.Current
+        {
+            get
+            {
+                return Current;
+            }
+        }
+
+        public ListNode Current
+        {
+            get
+            {
+                if (f) throw new InvalidOperationException();
+                return current;
+            }
+        }
+
+        public bool MoveNext()
+        {
+            if (f)
+            {
+                current = head;
+                f = false;
+                return true;
+            }
+            if (Current.Next is null) return false;
+
+            current = current.Next;
+            return true;
+        }
+
+        public void Reset()
+        {
+            f = true;
+            this.current = head;
         }
     }
 }
