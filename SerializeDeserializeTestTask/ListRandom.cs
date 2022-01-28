@@ -30,7 +30,6 @@ namespace SerializeDeserializeTestTask
         public ListNode Node;
         public int Next, Previous, Random;
     }
-
     public class ListRandom : IEnumerable
     {
         private const int minStreamLength = (sizeof(int) * 4) * 2 + sizeof(int); //struct*2 + Count;
@@ -107,7 +106,7 @@ namespace SerializeDeserializeTestTask
             Init();
         }
 
-        public void Init()
+        private void Init()
         {
             Store = new List<ListNode>();
             rnd = new Random();
@@ -125,6 +124,7 @@ namespace SerializeDeserializeTestTask
             _tail.Next = null;
             _tail.Random = rnd.Next(2) == 0 ? null : _head;
             _tail.Previous = _head;
+
         }
 
         public void InsertElement(int index, string value)
@@ -137,8 +137,9 @@ namespace SerializeDeserializeTestTask
 
             foreach (var n in this)
             {
-                if (index == c + 1) { Prev = n; c++; continue; }
+                if (index == c + 1) Prev = n;
                 if (index == c) { Next = n; break; }
+                c++;
             }
 
             Next.Previous = node;
@@ -183,6 +184,7 @@ namespace SerializeDeserializeTestTask
         public void Deserialize(Stream s)
         {
             if (s is null) throw new ArgumentNullException("s");
+            if (!s.CanRead) throw new NotSupportedException("s is unreadable");
 
             if (s.Length < minStreamLength)
                 throw new Exception("Stream is incorrect");
