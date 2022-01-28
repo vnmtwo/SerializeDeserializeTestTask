@@ -189,52 +189,31 @@ namespace SerializeDeserializeTestTask
 
         public void Deserialize(Stream s)
         {
-            if (s == null)
-                throw new ArgumentNullException("s");
+            if (s == null) throw new ArgumentNullException("s");
 
             if (s.Length < minStreamLength)
                 throw new Exception("Stream is incorrect");
 
-            byte[] buffer = new byte[sizeof(int)];
-
-            s.Read(buffer, 0, buffer.Length);
-            var count = BitConverter.ToInt32(buffer, 0);
-
-            int prev, next, random, datalength;
-            string data;
-
             var indexes = new List<TempNode>();
 
-            while (s.Read(buffer, 0, sizeof(int)) == buffer.Length)
+            int count = ReadInt(s);
+
+            while (s.Position < s.Length-4*sizeof(int)+1)
             {
-                prev = BitConverter.ToInt32(buffer, 0);
+                int prev = ReadInt(s);
+                int next = ReadInt(s);
+                int random = ReadInt(s);
+                int datalength = ReadInt(s);
+                string data;
 
-                s.Read(buffer, 0, buffer.Length);
-                next = BitConverter.ToInt32(buffer, 0);
-
-                s.Read(buffer, 0, buffer.Length);
-                random = BitConverter.ToInt32(buffer, 0);
-
-                s.Read(buffer, 0, buffer.Length);
-                datalength = BitConverter.ToInt32(buffer, 0);
-
-                var chars = new List<char>();
-
-                if (datalength / sizeof(char) == -1) data = null;
-                else
-                {
-                    buffer = new byte[sizeof(char)];
-                    for (int i = 0; i < datalength / sizeof(char); i++)
-                    {
-                        s.Read(buffer, 0, buffer.Length);
-                        chars.Add(BitConverter.ToChar(buffer, 0));
-                    }
-                    data = new string(chars.ToArray());
-                }
-
-                indexes.Add(new TempNode() { Node = new ListNode(data), Next = next, Previous = prev, Random = random });
-
-                buffer = new byte[sizeof(int)];
+                data = (datalength / sizeof(char) == -1)? null : ReadString(s, datalength);
+                
+                indexes.Add(new TempNode() { 
+                    Node = new ListNode(data), 
+                    Next = next, 
+                    Previous = prev, 
+                    Random = random 
+                });
             }
 
             if (indexes.Count != count) throw new Exception("Stream is corrupt");
@@ -245,6 +224,27 @@ namespace SerializeDeserializeTestTask
             {
                 FillNode(indexes, i);
             }
+        }
+
+        private static int ReadInt(Stream s)
+        {
+            byte[] buffer = new byte[sizeof(int)];
+            s.Read(buffer, 0, buffer.Length);
+            return BitConverter.ToInt32(buffer, 0);
+        }
+
+        private static string ReadString(Stream s, int dataLength)
+        {
+            var stringLength = dataLength/sizeof(char);
+            var chars = new char[stringLength] ;
+            var buffer = new byte[sizeof(char)];
+
+            for (int i = 0; i < stringLength; i++)
+            {
+                s.Read(buffer, 0, buffer.Length);
+                chars[i] = BitConverter.ToChar(buffer, 0);
+            }
+            return new string(chars);
         }
 
         private void FillNode(List<TempNode> indexes, int i)
