@@ -5,31 +5,6 @@ using System.IO;
 
 namespace SerializeDeserializeTestTask
 {
-    public class ListNode
-    {
-        public ListNode Previous;
-        public ListNode Next;
-        public ListNode Random; // произвольный элемент внутри списка
-        public string Data;
-
-        public ListNode(string value)
-        {
-            Data = value;
-        }
-    }
-
-    //struct: 
-    //prev: int
-    //next: int
-    //random: int
-    //datalength: int
-    //data:string?
-
-    internal class TempNode
-    {
-        public ListNode Node;
-        public int Next, Previous, Random;
-    }
     public class ListRandom : IEnumerable
     {
         private const int minStreamLength = (sizeof(int) * 4) * 2 + sizeof(int); //struct*2 + Count;
@@ -98,6 +73,21 @@ namespace SerializeDeserializeTestTask
 
             }
         }
+        public ListNode this[int index]
+        {
+            get
+            {
+                int c=0;
+                foreach(var e in this)
+                {
+                    if (c == index) return e;
+                    c++;
+                }
+                throw new Exception("get element exception");
+            }
+            private set { }
+
+        }
 
         private Random rnd;
 
@@ -156,6 +146,7 @@ namespace SerializeDeserializeTestTask
         public void Serialize(Stream s)
         {
             if (s is null) throw new ArgumentNullException("s");
+            if (!s.CanWrite) throw new NotSupportedException("s is unwritable");
 
             s.Write(BitConverter.GetBytes(Count));
 
@@ -276,59 +267,9 @@ namespace SerializeDeserializeTestTask
             return (IEnumerator)GetEnumerator();
         }
 
-        public ListRandomEnum GetEnumerator()
+        public Enumerators.ListRandomEnum GetEnumerator()
         {
-            return new ListRandomEnum(Head);
-        }
-    }
-    public class ListRandomEnum : IEnumerator
-    {
-        private ListNode head;
-        private ListNode current;
-        private bool f;
-
-        public ListRandomEnum(ListNode head)
-        {
-            f = true;
-            this.head = head;
-            this.current = null;
-        }
-
-        object IEnumerator.Current
-        {
-            get
-            {
-                return Current;
-            }
-        }
-
-        public ListNode Current
-        {
-            get
-            {
-                if (f) throw new InvalidOperationException();
-                return current;
-            }
-        }
-
-        public bool MoveNext()
-        {
-            if (f)
-            {
-                current = head;
-                f = false;
-                return true;
-            }
-            if (Current.Next is null) return false;
-
-            current = current.Next;
-            return true;
-        }
-
-        public void Reset()
-        {
-            f = true;
-            this.current = head;
+            return new Enumerators.ListRandomEnum(Head);
         }
     }
 }
