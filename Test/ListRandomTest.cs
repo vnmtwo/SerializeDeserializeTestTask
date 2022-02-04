@@ -194,21 +194,8 @@ namespace Test
         public void Deserialize_Exceptions()
         {
             var lr = new ListRandom();
+            Assert.Throws<ArgumentNullException>(() => lr.Deserialize(null));
             
-            using (var s = new MemoryStream())
-            {
-                lr.Serialize(s);
-                s.Write(new byte[18], 0, 18);
-                s.Seek(0, SeekOrigin.Begin);
-
-                Assert.Throws<ArgumentNullException>(() => lr.Deserialize(null));
-                Assert.Throws<Exception>(() => lr.Deserialize(s));
-                
-                s.Close();
-               
-                Assert.Throws<NotSupportedException>(() => lr.Deserialize(s));
-            }
-
             using (var s = new MemoryStream())
             {
                 s.Seek(0, SeekOrigin.Begin);
@@ -277,33 +264,36 @@ namespace Test
 
         private static byte[] GetTestSerializedData()
         {
-            var bl = new List<byte>();
+            byte[] buffer;
 
-            bl.AddRange(BitConverter.GetBytes(4));
+            using (var ms = new MemoryStream())
+            using (var bw = new BinaryWriter(ms))
+            {
+                bw.Write(4);
 
-            bl.AddRange(BitConverter.GetBytes(-1)); bl.AddRange(BitConverter.GetBytes(2));
-            bl.AddRange(BitConverter.GetBytes(-1)); bl.AddRange(BitConverter.GetBytes(1 * 2));
-            bl.AddRange(BitConverter.GetBytes('1'));
+                bw.Write(-1); bw.Write(2);
+                bw.Write(-1); bw.Write(1*2);
+                bw.Write("1");
 
-            bl.AddRange(BitConverter.GetBytes(3)); bl.AddRange(BitConverter.GetBytes(-1));
-            bl.AddRange(BitConverter.GetBytes(-1)); bl.AddRange(BitConverter.GetBytes(4 * 2));
-            bl.AddRange(BitConverter.GetBytes('4'));
-            bl.AddRange(BitConverter.GetBytes('4'));
-            bl.AddRange(BitConverter.GetBytes('4'));
-            bl.AddRange(BitConverter.GetBytes('4'));
+                bw.Write(3); bw.Write(-1);
+                bw.Write(-1); bw.Write(4 * 2);
+                bw.Write("4444");
 
-            bl.AddRange(BitConverter.GetBytes(0)); bl.AddRange(BitConverter.GetBytes(3));
-            bl.AddRange(BitConverter.GetBytes(-1)); bl.AddRange(BitConverter.GetBytes(2 * 2));
-            bl.AddRange(BitConverter.GetBytes('2'));
-            bl.AddRange(BitConverter.GetBytes('2'));
+                bw.Write(0); bw.Write(3);
+                bw.Write(-1); bw.Write(2 * 2);
+                bw.Write("22");
 
-            bl.AddRange(BitConverter.GetBytes(2)); bl.AddRange(BitConverter.GetBytes(1));
-            bl.AddRange(BitConverter.GetBytes(-1)); bl.AddRange(BitConverter.GetBytes(3 * 2));
-            bl.AddRange(BitConverter.GetBytes('3'));
-            bl.AddRange(BitConverter.GetBytes('3'));
-            bl.AddRange(BitConverter.GetBytes('3'));
-            
-            return bl.ToArray();
+                bw.Write(2); bw.Write(1);
+                bw.Write(-1); bw.Write(3 * 2);
+                bw.Write("333");
+
+                buffer = new byte[ms.Length];
+
+                ms.Seek(0, SeekOrigin.Begin);
+                ms.Read(buffer);
+            }
+
+            return buffer;
         }
 
     }

@@ -148,7 +148,9 @@ namespace SerializeDeserializeTestTask
             if (s is null) throw new ArgumentNullException("s");
             if (!s.CanWrite) throw new NotSupportedException("s is unwritable");
 
-            s.Write(BitConverter.GetBytes(Count));
+            var bw = new BinaryWriter(s);
+          
+            bw.Write(Count);
 
             foreach (var cn in Store)
             {
@@ -157,18 +159,11 @@ namespace SerializeDeserializeTestTask
                 int random = (cn.Random is null) ? -1 : Store.IndexOf(cn.Random);
                 int datalength = (cn.Data is null) ? -1 : cn.Data.Length;
 
-                s.Write(BitConverter.GetBytes(prev));
-                s.Write(BitConverter.GetBytes(next));
-                s.Write(BitConverter.GetBytes(random));
-                s.Write(BitConverter.GetBytes(datalength * sizeof(char)));
-
-                if (datalength > 0)
-                {
-                    foreach (var ch in cn.Data)
-                    {
-                        s.Write(BitConverter.GetBytes(ch));
-                    }
-                }
+                bw.Write(prev);
+                bw.Write(next);
+                bw.Write(random);
+                bw.Write(datalength * sizeof(char));
+                if (cn.Data != null) bw.Write(cn.Data);
             }
         }
 
@@ -182,28 +177,34 @@ namespace SerializeDeserializeTestTask
 
             var indexes = new List<TempNode>();
 
-            int count = ReadInt(s);
+            var br = new BinaryReader(s);
+          
+            int count = br.ReadInt32();
 
-            while (s.Position < s.Length - 4 * sizeof(int) + 1)
+            try
             {
-                int prev = ReadInt(s);
-                int next = ReadInt(s);
-                int random = ReadInt(s);
-                int datalength = ReadInt(s);
-                string data;
-
-                data = (datalength / sizeof(char) == -1) ? null : ReadString(s, datalength);
-
-                indexes.Add(new TempNode()
+                for (int i = 0; i < count; i++)
                 {
-                    Node = new ListNode(data),
-                    Next = next,
-                    Previous = prev,
-                    Random = random
-                });
-            }
+                    int prev = br.ReadInt32();
+                    int next = br.ReadInt32();
+                    int random = br.ReadInt32();
+                    int datalength = br.ReadInt32();
+                    string data = null;
 
-            if (indexes.Count != count) throw new Exception("Stream is corrupt");
+                    if (datalength >= 0) data = br.ReadString();
+                    indexes.Add(new TempNode()
+                    {
+                        Node = new ListNode(data),
+                        Next = next,
+                        Previous = prev,
+                        Random = random
+                    });
+                }
+            }
+            catch
+            {
+                throw new Exception("Stream is corrupt");
+            }
 
             Init();
 
@@ -211,27 +212,7 @@ namespace SerializeDeserializeTestTask
             {
                 FillNode(indexes, i);
             }
-        }
-
-        private static int ReadInt(Stream s)
-        {
-            byte[] buffer = new byte[sizeof(int)];
-            s.Read(buffer, 0, buffer.Length);
-            return BitConverter.ToInt32(buffer, 0);
-        }
-
-        private static string ReadString(Stream s, int dataLength)
-        {
-            var stringLength = dataLength / sizeof(char);
-            var chars = new char[stringLength];
-            var buffer = new byte[sizeof(char)];
-
-            for (int i = 0; i < stringLength; i++)
-            {
-                s.Read(buffer, 0, buffer.Length);
-                chars[i] = BitConverter.ToChar(buffer, 0);
-            }
-            return new string(chars);
+           
         }
 
         private void FillNode(List<TempNode> indexes, int i)
